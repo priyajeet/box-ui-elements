@@ -318,7 +318,7 @@ class DetailsSidebar extends React.PureComponent<Props, State> {
         }: State = this.state;
 
         return (
-            <SidebarContent title={<FormattedMessage {...messages.sidebarDetailsTitle} />}>
+            <SidebarContent className="bcs-details" title={<FormattedMessage {...messages.sidebarDetailsTitle} />}>
                 {hasNotices && (
                     <div className="bcs-details-content">{hasNotices && <SidebarNotices file={file} />}</div>
                 )}

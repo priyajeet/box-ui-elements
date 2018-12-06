@@ -438,7 +438,7 @@ class ActivitySidebar extends React.PureComponent<Props, State> {
             currentUserError,
         } = this.state;
         return (
-            <SidebarContent title={<FormattedMessage {...messages.sidebarActivityTitle} />}>
+            <SidebarContent className="bcs-activity" title={<FormattedMessage {...messages.sidebarActivityTitle} />}>
                 <ActivityFeed
                     file={file}
                     activityFeedError={activityFeedError}

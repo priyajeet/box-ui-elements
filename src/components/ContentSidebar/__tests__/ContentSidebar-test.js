@@ -7,14 +7,10 @@ import { SIDEBAR_FIELDS_TO_FETCH } from '../../../util/fields';
 jest.mock('../SidebarUtils');
 jest.mock('../Sidebar', () => 'sidebar');
 
-const file = {
-    id: 'I_AM_A_FILE',
-};
-
-const editors = ['foo'];
-
 describe('components/ContentSidebar/ContentSidebar', () => {
     let rootElement;
+    const file = { id: 'I_AM_A_FILE' };
+    const editors = ['foo'];
     const getWrapper = props => mount(<ContentSidebar {...props} />, { attachTo: rootElement });
 
     beforeEach(() => {

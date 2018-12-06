@@ -11,29 +11,18 @@ import uniqueid from 'lodash/uniqueId';
 import noop from 'lodash/noop';
 import LoadingIndicator from 'box-react-ui/lib/components/loading-indicator/LoadingIndicator';
 import Sidebar from './Sidebar';
-import SidebarNav from './SidebarNav';
 import API from '../../api';
 import APIContext from '../APIContext';
 import Internationalize from '../Internationalize';
 import { withErrorBoundary } from '../ErrorBoundary';
 import { SIDEBAR_FIELDS_TO_FETCH } from '../../util/fields';
-import {
-    DEFAULT_HOSTNAME_API,
-    CLIENT_NAME_CONTENT_SIDEBAR,
-    SIDEBAR_VIEW_SKILLS,
-    SIDEBAR_VIEW_ACTIVITY,
-    SIDEBAR_VIEW_DETAILS,
-    SIDEBAR_VIEW_METADATA,
-    ORIGIN_CONTENT_SIDEBAR,
-} from '../../constants';
-import SidebarUtils from './SidebarUtils';
+import { DEFAULT_HOSTNAME_API, CLIENT_NAME_CONTENT_SIDEBAR, ORIGIN_CONTENT_SIDEBAR } from '../../constants';
 import type { DetailsSidebarProps } from './DetailsSidebar';
 import type { ActivitySidebarProps } from './ActivitySidebar';
 import type { MetadataSidebarProps } from './MetadataSidebar';
 import type { $AxiosXHR } from 'axios'; // eslint-disable-line
 import '../fonts.scss';
 import '../base.scss';
-import '../modal.scss';
 import './ContentSidebar.scss';
 
 type Props = {
@@ -43,7 +32,6 @@ type Props = {
     className: string,
     clientName: string,
     currentUser?: User,
-    defaultView?: SidebarView,
     detailsSidebarProps: DetailsSidebarProps,
     fileId?: string,
     getPreview: Function,
@@ -51,7 +39,7 @@ type Props = {
     hasActivityFeed: boolean,
     hasMetadata: boolean,
     hasSkills: boolean,
-    isLarge?: boolean,
+    isLarge: boolean,
     language?: string,
     metadataSidebarProps: MetadataSidebarProps,
     messages?: StringMap,
@@ -127,13 +115,16 @@ class ContentSidebar extends React.PureComponent<Props, State> {
             token,
         });
 
-        this.state = { isLoading: true, isOpen: !!isLarge };
+        this.state = {
+            isLoading: true, // by default show the loading indicator
+            isOpen: isLarge, // by default open or close based on responsiveness
+        };
     }
 
     /**
      * Destroys api instances with caches
      *
-     * @private
+     * @public
      * @return {void}
      */
     clearCache(): void {
@@ -176,8 +167,12 @@ class ContentSidebar extends React.PureComponent<Props, State> {
         const { view }: State = this.state;
 
         if (fileId !== prevFileId) {
+            // If the file has changed, fetch the new one. This should also eventually
+            // use file version id when we start viewing file versions.
+            // No need to unset the file object since we will show a loading indicator.
             this.fetchFile();
         } else if (!view && isLarge !== prevIsLarge) {
+            // If the view has been manually set, ignore responsiveness changes.
             this.setState({ isOpen: isLarge });
         }
     }
@@ -190,7 +185,8 @@ class ContentSidebar extends React.PureComponent<Props, State> {
      */
     onToggle = (view: SidebarView): void => {
         const { isOpen, view: priorView }: State = this.state;
-        const isClosing = isOpen && (!priorView || view === priorView);
+        const isSameView = view === priorView;
+        const isClosing = isOpen && isSameView;
         this.setState({
             view,
             isOpen: !isClosing,
@@ -218,55 +214,6 @@ class ContentSidebar extends React.PureComponent<Props, State> {
     };
 
     /**
-     * File fetch success callback that sets the file and view
-     *
-     * @private
-     * @param {Object} props - component props
-     * @param {Object} file - Box file
-     * @return {string} Sidebar view to use
-     */
-    getSidebarView(): ?SidebarView {
-        const { file, isOpen, metadataEditors, view }: State = this.state;
-        const { defaultView }: Props = this.props;
-
-        if (!isOpen) {
-            return undefined;
-        }
-
-        // If there was a default view provided, force use that
-        if (defaultView) {
-            return defaultView;
-        }
-
-        let newView = view;
-        const canDefaultToSkills = SidebarUtils.shouldRenderSkillsSidebar(this.props, file);
-        const canDefaultToDetails = SidebarUtils.canHaveDetailsSidebar(this.props);
-        const canDefaultToActivity = SidebarUtils.canHaveActivitySidebar(this.props);
-        const canDefaultToMetadata = SidebarUtils.shouldRenderMetadataSidebar(this.props, metadataEditors);
-
-        // Only reset the view if prior view is no longer applicable
-        if (
-            !view ||
-            (view === SIDEBAR_VIEW_SKILLS && !canDefaultToSkills) ||
-            (view === SIDEBAR_VIEW_ACTIVITY && !canDefaultToActivity) ||
-            (view === SIDEBAR_VIEW_DETAILS && !canDefaultToDetails) ||
-            (view === SIDEBAR_VIEW_METADATA && !canDefaultToMetadata)
-        ) {
-            if (canDefaultToSkills) {
-                newView = SIDEBAR_VIEW_SKILLS;
-            } else if (canDefaultToActivity) {
-                newView = SIDEBAR_VIEW_ACTIVITY;
-            } else if (canDefaultToDetails) {
-                newView = SIDEBAR_VIEW_DETAILS;
-            } else if (canDefaultToMetadata) {
-                newView = SIDEBAR_VIEW_METADATA;
-            }
-        }
-
-        return newView;
-    }
-
-    /**
      * Success callback for fetching metadata editors
      *
      * @private
@@ -285,7 +232,7 @@ class ContentSidebar extends React.PureComponent<Props, State> {
      */
     fetchMetadata(): void {
         const { file }: State = this.state;
-        const { metadataSidebarProps }: Props = this.props;
+        const { hasMetadata, metadataSidebarProps }: Props = this.props;
         const { getMetadata, isFeatureEnabled = true }: MetadataSidebarProps = metadataSidebarProps;
 
         // Only fetch metadata if we think that the file may have metadata on it
@@ -293,9 +240,7 @@ class ContentSidebar extends React.PureComponent<Props, State> {
         // user who doesn't have the metadata feature but is collabed on a file from a user
         // who added metadata on the file. If the feature is enabled we always end up showing
         // the metadata sidebar irrespective of there being any existing metadata or not.
-        const canHaveMetadataSidebar = !isFeatureEnabled && SidebarUtils.canHaveMetadataSidebar(this.props);
-
-        if (canHaveMetadataSidebar) {
+        if (hasMetadata && !isFeatureEnabled) {
             this.api
                 .getMetadataAPI(true)
                 .getEditors(
@@ -334,9 +279,20 @@ class ContentSidebar extends React.PureComponent<Props, State> {
      * @return {void}
      */
     fetchFile(fetchOptions: FetchOptions = {}): void {
-        const { fileId }: Props = this.props;
+        const { detailsSidebarProps, fileId, hasActivityFeed, hasMetadata, hasSkills }: Props = this.props;
+        const { hasProperties, hasAccessStats, hasClassification, hasVersions, hasNotices } = detailsSidebarProps;
+        const hasSidebar =
+            hasActivityFeed ||
+            hasMetadata ||
+            hasSkills ||
+            !!hasProperties ||
+            !!hasAccessStats ||
+            !!hasClassification ||
+            !!hasVersions ||
+            !!hasNotices;
+
         this.setState({ isLoading: true });
-        if (fileId && SidebarUtils.canHaveSidebar(this.props)) {
+        if (fileId && hasSidebar) {
             this.api.getFileAPI().getFile(fileId, this.fetchFileSuccessCallback, this.errorCallback, {
                 ...fetchOptions,
                 fields: SIDEBAR_FIELDS_TO_FETCH,
@@ -359,26 +315,24 @@ class ContentSidebar extends React.PureComponent<Props, State> {
             getPreview,
             getViewer,
             hasActivityFeed,
+            hasMetadata,
+            hasSkills,
             language,
             messages,
             metadataSidebarProps,
             onVersionHistoryClick,
         }: Props = this.props;
-        const { file, isLoading, isOpen, metadataEditors }: State = this.state;
-        const hasSidebar = SidebarUtils.shouldRenderSidebar(this.props, file, metadataEditors);
+        const { file, isLoading, isOpen, metadataEditors, view }: State = this.state;
 
-        if (!file || !hasSidebar) {
+        // For the initial render don't do anything till we have atleast some data to show.
+        // This data in future renders can just also be data from the prior file.
+        if (!file) {
             return null;
         }
 
-        const selectedView = this.getSidebarView();
-        const hasSkills = SidebarUtils.shouldRenderSkillsSidebar(this.props, file);
-        const hasDetails = SidebarUtils.canHaveDetailsSidebar(this.props);
-        const hasMetadata = SidebarUtils.shouldRenderMetadataSidebar(this.props, metadataEditors);
         const styleClassName = classNames(
             'be bcs',
             {
-                [`bcs-${((selectedView: any): string)}`]: isOpen,
                 'bcs-is-open': isOpen,
             },
             className,
@@ -386,37 +340,35 @@ class ContentSidebar extends React.PureComponent<Props, State> {
 
         return (
             <Internationalize language={language} messages={messages}>
-                <aside id={this.id} className={styleClassName}>
-                    <div className="be-app-element">
-                        {isLoading ? (
-                            <div className="bcs-loading">
-                                <LoadingIndicator />
-                            </div>
-                        ) : (
-                            <APIContext.Provider value={(this.api: any)}>
-                                <SidebarNav
-                                    hasSkills={hasSkills}
-                                    hasMetadata={hasMetadata}
-                                    hasActivityFeed={hasActivityFeed}
-                                    hasDetails={hasDetails}
-                                    onToggle={this.onToggle}
-                                    selectedView={selectedView}
-                                />
+                <APIContext.Provider value={(this.api: any)}>
+                    <aside id={this.id} className={styleClassName}>
+                        <div className="be-app-element">
+                            {isLoading ? (
+                                <div className="bcs-loading">
+                                    <LoadingIndicator />
+                                </div>
+                            ) : (
                                 <Sidebar
                                     activitySidebarProps={activitySidebarProps}
                                     detailsSidebarProps={detailsSidebarProps}
                                     file={file}
                                     getPreview={getPreview}
                                     getViewer={getViewer}
+                                    hasActivityFeed={hasActivityFeed}
+                                    hasMetadata={hasMetadata}
+                                    hasSkills={hasSkills}
+                                    isOpen={isOpen}
                                     key={file.id}
+                                    metadataEditors={metadataEditors}
                                     metadataSidebarProps={metadataSidebarProps}
                                     onVersionHistoryClick={onVersionHistoryClick}
-                                    selectedView={selectedView}
+                                    onToggle={this.onToggle}
+                                    view={view}
                                 />
-                            </APIContext.Provider>
-                        )}
-                    </div>
-                </aside>
+                            )}
+                        </div>
+                    </aside>
+                </APIContext.Provider>
             </Internationalize>
         );
     }

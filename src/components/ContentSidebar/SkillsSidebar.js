@@ -178,7 +178,7 @@ class SkillsSidebar extends React.PureComponent<Props, State> {
         const { cards, errors }: State = this.state;
 
         return (
-            <SidebarContent title={<FormattedMessage {...messages.sidebarSkillsTitle} />}>
+            <SidebarContent className="bcs-skills" title={<FormattedMessage {...messages.sidebarSkillsTitle} />}>
                 {cards ? (
                     <SidebarSkills
                         file={file}
