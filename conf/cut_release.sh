@@ -164,17 +164,17 @@ push_new_release() {
         return 1
     fi
 
-    # Linting and testing
-    if ! lint_and_test; then
-        printf "${red}Failed linting and testing!${end}"
-        return 1
-    fi
+    # # Linting and testing
+    # if ! lint_and_test; then
+    #     printf "${red}Failed linting and testing!${end}"
+    #     return 1
+    # fi
 
-    # Check uncommitted files
-    check_uncommitted_files || return 1
+    # # Check uncommitted files
+    # check_uncommitted_files || return 1
 
-    # Check untracked files
-    check_untracked_files || return 1
+    # # Check untracked files
+    # check_untracked_files || return 1
 
     # Run the release
     if ! yarn semantic-release --no-ci --dry-run; then
