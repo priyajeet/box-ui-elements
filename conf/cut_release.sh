@@ -177,7 +177,7 @@ push_new_release() {
     # check_untracked_files || return 1
 
     # Run the release
-    if ! yarn semantic-release --no-ci --dry-run; then
+    if ! yarn semantic-release --no-ci; then
         printf "${red}Failed semantic release!${end}"
         return 1
     fi
