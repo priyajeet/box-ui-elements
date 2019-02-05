@@ -24,13 +24,14 @@ setup() {
         printf "${green}Removed existing release remote branch!${end}"
     fi
     printf "${blue}Adding release remote branch...${end}"
-    git remote add release git@github.com:box/box-ui-elements.git || return 1
+    git remote add release git@github.com:priyajeet/box-ui-elements.git || return 1
     printf "${green}Release remote branch added!${end}"
 
-    # Checkout the release branch
-    printf "${blue}Checking out or creating release branch...${end}"
-    if ! git checkout release; then
-        git checkout -b release || return 1
+    # Checkout the branch
+    printf "${blue}Checking out ${DISTTAG} branch...${end}"
+    if ! git checkout "$DISTTAG"; then
+        printf "${red}Missing branch ${DISTTAG} ${end}"
+        return 1
     fi
     printf "${green}Checked out release branch!${end}"
 
@@ -40,14 +41,14 @@ setup() {
     printf "${green}Fetched from remote release branch!${end}"
 
     # Only proceed if release scripts haven't changed
-    check_release_scripts_changed || return 1
+    # check_release_scripts_changed || return 1
 
     if [ "$HOTFIX" == true ]; then
-        printf "${blue}This is a hotfix release, ignoring reset to master...${end}"
+        printf "${blue}This is a hotfix release, ignoring reset to ${DISTTAG}...${end}"
     else
-        # Reset hard to master branch on release remote
+        # Reset hard to branch on release remote
         printf "${blue}Resetting to remote release branch...${end}"
-        git reset --hard release/master || return 1
+        git reset --hard release/"$DISTTAG" || return 1
         printf "${green}Reset to remote release branch!${end}"
     fi
 
@@ -56,10 +57,10 @@ setup() {
     git fetch --prune release '+refs/tags/*:refs/tags/*' || return 1
     printf "${green}Pruned tags!${end}"
 
-    # Clean untracked files
-    printf "${blue}Updating remote release branch...${end}"
-    git push release release --force --no-verify || return 1
-    printf "${green}Updated remote release branch!${end}"
+    # # Clean untracked files
+    # printf "${blue}Updating remote release branch...${end}"
+    # git push release release --force --no-verify || return 1
+    # printf "${green}Updated remote release branch!${end}"
 
     # Clean untracked files
     printf "${blue}Cleaning untracked files...${end}"
@@ -97,7 +98,7 @@ build_assets() {
 
 push_to_npm() {
     printf "${blue}Publishing assets to npmjs...${end}"
-    npm publish --access public || return 1
+    npm publish --access public --tag "$DISTTAG" || return 1
     printf "${green}Published npm!${end}"
 }
 
@@ -148,14 +149,14 @@ check_branch_dirty() {
 }
 
 push_new_release() {
-    # Check branch being dirty
-    check_branch_dirty || return 1
+    # # Check branch being dirty
+    # check_branch_dirty || return 1
 
-    # Check uncommitted files
-    check_uncommitted_files || return 1
+    # # Check uncommitted files
+    # check_uncommitted_files || return 1
 
-    # Check untracked files
-    check_untracked_files || return 1
+    # # Check untracked files
+    # check_untracked_files || return 1
 
     # Setup
     if ! setup; then
@@ -176,7 +177,7 @@ push_new_release() {
     check_untracked_files || return 1
 
     # Run the release
-    if ! yarn semantic-release --no-ci; then
+    if ! yarn semantic-release --no-ci --dry-run; then
         printf "${red}Failed semantic release!${end}"
         return 1
     fi
