@@ -1,0 +1,36 @@
+@import '../../styles/variables';
+@import './variables';
+
+.radio-group {
+    &.bdl-RadioGroup--horizontal {
+        display: flex;
+
+        .radio-container {
+            margin: 0;
+
+            & ~ .radio-container {
+                margin-left: 20px;
+            }
+        }
+    }
+}
+
+.red .radio-label {
+    @include bdl-RadioButton-label(red, white, red);
+}
+
+.green .radio-label {
+    @include bdl-RadioButton-label(green, white, green);
+}
+
+.orange .radio-label {
+    @include bdl-RadioButton-label(orange, white, orange);
+}
+
+.blue .radio-label {
+    @include bdl-RadioButton-label(blue, white, blue);
+}
+
+.grey .radio-label {
+    @include bdl-RadioButton-label(grey, white, grey);
+}

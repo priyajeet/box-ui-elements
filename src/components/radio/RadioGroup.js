@@ -1,11 +1,12 @@
 // @flow
 import * as React from 'react';
-
-import RadioButton from './RadioButton';
+import classNames from 'classnames';
+import './RadioGroup.scss';
 
 type Props = {
     children: React.Node,
     className: string,
+    isHorizontal: boolean,
     name?: string,
     onChange?: Function,
     value?: string,
@@ -18,6 +19,7 @@ type State = {
 class RadioGroup extends React.Component<Props, State> {
     static defaultProps = {
         className: '',
+        isHorizontal: false,
     };
 
     constructor(props: Props) {
@@ -43,24 +45,30 @@ class RadioGroup extends React.Component<Props, State> {
     };
 
     render() {
-        const { children, className, name } = this.props;
+        const { children, className, isHorizontal, name } = this.props;
         const { value } = this.state;
+        const classes = classNames(
+            'radio-group',
+            {
+                'bdl-RadioGroup--horizontal': isHorizontal,
+            },
+            className,
+        );
 
         return (
-            <div className={`radio-group ${className}`} onChange={this.onChangeHandler}>
-                {React.Children.map(children, radio => (
-                    <RadioButton
-                        description={radio.props.description}
-                        isDisabled={radio.props.isDisabled}
-                        isSelected={radio.props.value === value}
-                        label={radio.props.label}
-                        name={name}
-                        value={radio.props.value}
-                    />
-                ))}
+            <div className={classes} onChange={this.onChangeHandler}>
+                {React.Children.map(children, radio =>
+                    React.cloneElement(radio, {
+                        description: isHorizontal ? '' : radio.props.description,
+                        hideLabel: isHorizontal ? true : radio.props.hideLabel,
+                        isSelected: radio.props.value === value,
+                        name,
+                    }),
+                )}
             </div>
         );
     }
 }
 
+export type RadioGroupProps = Props;
 export default RadioGroup;

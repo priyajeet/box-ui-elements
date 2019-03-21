@@ -1,0 +1,21 @@
+@import '../../styles/variables';
+
+@mixin bdl-RadioButton-label(
+    $backgroundColor: $white,
+    $checkedBorderColor: $white,
+    $checkedBackgroundColor: $primary-color
+) {
+    > input[type='radio'] {
+        // For non checked state background and border color are the same
+        + span::before {
+            background-color: $backgroundColor;
+            border-color: $backgroundColor;
+        }
+
+        // For checked state border is contrasting to the background
+        &:checked + span::before {
+            background-color: $checkedBackgroundColor;
+            border-color: $checkedBorderColor;
+        }
+    }
+}
