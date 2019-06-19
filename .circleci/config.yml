@@ -1,0 +1,94 @@
+
+aliases:
+  - &yarn |
+    yarn install --non-interactive --frozen-lockfile --cache-folder ~/.cache/yarn
+
+  - &restore-yarn-cache
+    keys:
+      - yarn-{{ .Branch }}-{{ checksum "yarn.lock" }}
+      # Fallback in case checksum fails
+      - yarn-{{ .Branch }}-
+
+  - &save-yarn-cache
+    paths:
+      - node_modules
+      - ~/.cache/yarn
+    key: yarn-{{ .Branch }}-{{ checksum "yarn.lock" }}
+
+  - &filter-only-master
+    branches:
+      only:
+        - master
+
+defaults: &defaults
+  working_directory: ~/buie
+  docker:
+    - image: circleci/node:10
+  resource_class: large
+
+version: 2
+jobs:
+  babel-build:
+    <<: *defaults
+    steps:
+      - checkout
+      - restore-cache: *restore-yarn-cache
+      - run: *yarn
+      - save-cache: *save-yarn-cache
+      - run:
+          name: Babel build
+          command: npm-run-all clean build:i18n build:ci:es
+
+  webpack-babel:
+    <<: *defaults
+    steps:
+      - checkout
+      - restore-cache: *restore-yarn-cache
+      - run: *yarn
+      - save-cache: *save-yarn-cache
+      - run:
+          name: Webpack build
+          command: npm-run-all clean build:i18n build:ci:dist
+
+  lint:
+    <<: *defaults
+    steps:
+      - checkout
+      - restore-cache: *restore-yarn-cache
+      - run: *yarn
+      - save-cache: *save-yarn-cache
+      - run:
+          name: Code Lint
+          command: npm-run-all clean build:i18n lint
+
+  flow:
+    <<: *defaults
+    steps:
+      - checkout
+      - restore-cache: *restore-yarn-cache
+      - run: *yarn
+      - save-cache: *save-yarn-cache
+      - run:
+          name: Flow types check
+          command: npm-run-all clean build:i18n && echo "Running Flow on $(yarn flow ls | wc -l) files" && yarn flow
+
+  tests:
+    <<: *defaults
+    steps:
+      - checkout
+      - restore-cache: *restore-yarn-cache
+      - run: *yarn
+      - save-cache: *save-yarn-cache
+      - run:
+          name: Unit tests
+          command: yarn test
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - babel-build
+      - webpack-build
+      - lint
+      - flow
+      - tests
